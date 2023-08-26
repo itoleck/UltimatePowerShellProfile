@@ -16,7 +16,7 @@ $script:max_profileload_seconds = 5
 
 #PowerShell profile URL
 #You can copy the code in this script and create a Github. Update the link below.
-$script:psprofile_link = ""
+$script:psprofile_link = "https://raw.githubusercontent.com/itoleck/UltimatePowerShellProfile/main/Microsoft.PowerShell_profile.ps1"
 
 #Which modules to load in this profile based on if the environment is admin(scope global) or user(scope local).
 $script:global_modules = 'Az','AzureAD','MSOnline','Az.CostManagement','Microsoft.Graph'

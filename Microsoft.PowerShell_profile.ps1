@@ -72,7 +72,7 @@ if(! (Test-Path -Path $PROFILE)) {
             Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)PowerShell" -Force -Verbose
         } else {
             if ($IsLinux) {
-                Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$profile.CurrentUserCurrentHost" -Force -Verbose
+                Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$profile" -Force -Verbose
             }
         }
     }

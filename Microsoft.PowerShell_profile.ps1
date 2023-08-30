@@ -193,9 +193,6 @@ Function uptime {
     if ($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
         net statistics workstation | Select-String "since" | foreach-object {$_.ToString().Replace('Statistics since ', '')}
     }
-    if ($IsLinux) {
-        Remove-Item -Path Function:\uptime
-    }
 }
 Function Get-PubIP {
     (Invoke-WebRequest http://ifconfig.me/ip ).Content
@@ -374,10 +371,10 @@ if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
         )
         Get-Content -Path $Path | Select-String -Pattern $SearchString -SimpleMatch
     }
-    Function ipconfig() {
+    Function ipconfig {
         ipconfig.exe /all
     }
-    Function cleardns() {
+    Function cleardns {
         ipconfig.exe /flushdns
     }
 }
@@ -420,6 +417,22 @@ if($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimate
 }
 
 #--------------------------------------------------------------------------------------
+#Remove Linux-Like functions in Linux PowerShell
+if ($IsLinux) {
+    Remove-Item -Path Function:\uptime
+    Remove-Item -Path Function:\df
+    Remove-Item -Path Function:\pkill
+    Remove-Item -Path Function:\head
+    Remove-Item -Path Function:\tail
+    Remove-Item -Path Function:\touchuni
+    Remove-Item -Path Function:\touchutf8
+    Remove-Item -Path Function:\ipconfig
+    Remove-Item -Path Function:\cleardns
+    Remove-Item -Path Function:\grepstr
+    Remove-Item -Path Function:\grepfile
+    Remove-Item -Path Function:\disks
+}
+
 #Remind user which functions are available in the console
 Write-Output "The following functions were set by profile:"
 Get-ChildItem -Path Function:\ | Where-Object{$_.Source.ToString().Length -lt 1} | Select-Object Name | Format-Wide -AutoSize

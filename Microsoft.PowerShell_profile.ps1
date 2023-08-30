@@ -27,17 +27,26 @@
 
 $script:UltimatePSProfile = [PSCustomObject]@{
     psprofile_link = "https://raw.githubusercontent.com/itoleck/UltimatePowerShellProfile/main/Microsoft.PowerShell_profile.ps1"
-    psprofile_repo_path = "$env:USERPROFILE\source\repos\itoleck\UltimatePowerShellProfile\"
+    psprofile_repo_path = ""
     stopwatch = [system.diagnostics.stopwatch]::StartNew()
     max_profileload_seconds = 5
-    mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "\"
-    oh_my_posh_theme = "$env:APPDATA\Local\Programs\oh-my-posh\themes\agnoster.omp"
-    gh_repo_base_folder = "$env:USERPROFILE\source\repos\"
-    system_temp = "c:\temp\"
+    mydocuments_path = ""
+    oh_my_posh_theme = ""
+    gh_repo_base_folder = ""
+    system_temp = ""
     global_modules = 'Az','AzureAD','MSOnline','Az.CostManagement','Microsoft.Graph'
     local_modules = 'Terminal-Icons','Carbon','CredentialManager','PnP.PowerShell','ImportExcel','WifiTools','ExchangeOnlineManagement','MicrosoftTeams','PSScriptAnalyzer','AzureSaveMoney'
 }
 #--------------------------------------------------------------------------------------
+
+#Reset some paths if this session is running in Windows
+if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+    $script:UltimatePSProfile.psprofile_repo_path = "$env:USERPROFILE\source\repos\itoleck\UltimatePowerShellProfile\"
+    $script:UltimatePSProfile.gh_repo_base_folder = "$env:USERPROFILE\source\repos\"
+    $script:UltimatePSProfile.system_temp = "c:\temp\"
+    $script:UltimatePSProfile.mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "\"
+    $script:UltimatePSProfile.oh_my_posh_theme = "$env:APPDATA\Local\Programs\oh-my-posh\themes\agnoster.omp"
+}
 
 #Reset some paths if this session is running in Linux
 if ($IsLinux) {

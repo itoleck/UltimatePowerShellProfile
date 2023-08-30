@@ -417,7 +417,7 @@ if($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimate
 }
 
 #--------------------------------------------------------------------------------------
-#Remove Linux-Like functions in Linux PowerShell
+#Remove Linux-Like functions and other Windows functions in Linux PowerShell
 if ($IsLinux) {
     Remove-Item -Path Function:\uptime
     Remove-Item -Path Function:\df
@@ -431,6 +431,13 @@ if ($IsLinux) {
     Remove-Item -Path Function:\grepstr
     Remove-Item -Path Function:\grepfile
     Remove-Item -Path Function:\disks
+    Remove-Item -Path Function:\n
+    Remove-Item -Path Function:\n++
+    Remove-Item -Path Function:\cdwpt
+    Remove-Item -Path Function:\cddrivers
+    Remove-Item -Path Function:\HKCU:
+    Remove-Item -Path Function:\HKLM:
+    Remove-Item -Path Function:\admin
 }
 
 #Remind user which functions are available in the console

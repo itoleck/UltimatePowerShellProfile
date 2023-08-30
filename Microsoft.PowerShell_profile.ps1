@@ -232,9 +232,9 @@ Function Install-Profile {
 #Open this profile in PowerShell ISE or Notepad if ISE is not running
 Function Edit-Profile {
     if($host.Name -match "ise") {
-        $psISE.CurrentPowerShellTab.Files.Add($profile.CurrentUserAllHosts)
+        $psISE.CurrentPowerShellTab.Files.Add($profile.CurrentUserCurrentHost)
     } else {
-        notepad.exe $profile.CurrentUserAllHosts
+        notepad.exe $profile.CurrentUserCurrentHost
     }
 }
 
@@ -287,23 +287,21 @@ Function tail($file, $rows) {
 Function grepstr {
     [CmdletBinding()]
     param(
-      [Parameter(Mandatory=$true,ValueFromPipeline = $true)][string] $InputObject,
-      [Parameter(Mandatory=$true)][string] $SearchString
+      [Parameter(Mandatory=$true,ValueFromPipeline = $true)]
+      [AllowEmptyString()]
+      [string] $InputObject,
+      [Parameter(Mandatory=$true)]
+      [string] $SearchString
     )
-    begin { $objects = @() }
-    process {
-        if ($InputObject.Length -gt 0) {
-            $objects += $InputObject
-        }
-    }
-    end {
-        $objects | Select-String -Pattern $SearchString -SimpleMatch
-    }
+    $InputObject | Select-String -Pattern $SearchString -SimpleMatch
 }
 Function grepfile {
     param(
-      [Parameter(Mandatory=$true)][string] $Path,
-      [Parameter(Mandatory=$true)][string] $SearchString
+      [Parameter(Mandatory=$true)]
+      [AllowEmptyString()]
+      [string] $Path,
+      [Parameter(Mandatory=$true)]
+      [string] $SearchString
     )
     Get-Content -Path $Path | Select-String -Pattern $SearchString -SimpleMatch
 }

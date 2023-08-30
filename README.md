@@ -6,7 +6,7 @@ This script does not guaranty 5 second profile load, but has a check to skip som
 
 ## First time use
 
-iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/itoleck/VariousScripts/main/Windows/PowerShell/Microsoft.PowerShell_profile.ps1'))
+iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/itoleck/UltimatePowerShellProfile/main/Microsoft.PowerShell_profile.ps1'))
 
 Automatically downloads the script and copies to the PowerShell folders for PS5 & PS7
 

@@ -30,30 +30,45 @@ $script:UltimatePSProfile = [PSCustomObject]@{
     psprofile_repo_path = "$env:USERPROFILE\source\repos\itoleck\UltimatePowerShellProfile\"
     stopwatch = [system.diagnostics.stopwatch]::StartNew()
     max_profileload_seconds = 5
-    global_modules = 'Az','AzureAD','MSOnline','Az.CostManagement','Microsoft.Graph'
-    local_modules = 'Terminal-Icons','Carbon','CredentialManager','PnP.PowerShell','ImportExcel','WifiTools','ExchangeOnlineManagement','MicrosoftTeams','PSScriptAnalyzer','AzureSaveMoney'
-    mydocuments_path = [System.Environment]::GetFolderPath('Personal')
+    mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "\"
     oh_my_posh_theme = "$env:APPDATA\Local\Programs\oh-my-posh\themes\agnoster.omp"
     gh_repo_base_folder = "$env:USERPROFILE\source\repos\"
-    system_temp = "c:\temp"
+    system_temp = "c:\temp\"
+    global_modules = 'Az','AzureAD','MSOnline','Az.CostManagement','Microsoft.Graph'
+    local_modules = 'Terminal-Icons','Carbon','CredentialManager','PnP.PowerShell','ImportExcel','WifiTools','ExchangeOnlineManagement','MicrosoftTeams','PSScriptAnalyzer','AzureSaveMoney'
 }
 #--------------------------------------------------------------------------------------
+
+#Reset some paths if this session is running in Linux
+if ($IsLinux) {
+    $script:UltimatePSProfile.psprofile_repo_path = "$($script:UltimatePSProfile.mydocuments_path)/source/repos/itoleck/UltimatePowerShellProfile/"
+    $script:UltimatePSProfile.gh_repo_base_folder = "$($script:UltimatePSProfile.mydocuments_path)/source/repos/"
+    $script:UltimatePSProfile.system_temp = "/tmp/"
+    $script:UltimatePSProfile.mydocuments_path = $script:UltimatePSProfile.mydocuments_path + "/"
+}
 
 #--------------------------------------------------------------------------------------
 #Create this profile from GH ifit does not exist
 if(! (Test-Path -Path $PROFILE)) {
     try {
-        Invoke-WebRequest -Uri $script:UltimatePSProfile.psprofile_link -OutFile "$($script:UltimatePSProfile.mydocuments_path)\Microsoft.PowerShell_profile.ps1"
+        #Use My Documents for the download because Downloads path is not available unless you use pinvoke 
+        Invoke-WebRequest -Uri $script:UltimatePSProfile.psprofile_link -OutFile "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1"
         Write-Output "Downloaded profile from $($script:UltimatePSProfile.psprofile_link)"
     } catch {
         Write-Output "Error downloading profile from $($script:UltimatePSProfile.psprofile_link)"
     }
     try {
-        Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)\Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)\WindowsPowerShell\" -Force -Verbose
-        Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)\Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)\PowerShell\" -Force -Verbose
+        if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+            Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)WindowsPowerShell" -Force -Verbose
+            Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)PowerShell" -Force -Verbose
+        } else {
+            if ($IsLinux) {
+                Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$profile.CurrentUserCurrentHost" -Force -Verbose
+            }
+        }
     }
     catch {
-        Write-Output "Error copying profile from $($script:UltimatePSProfile.mydocuments_path)\Microsoft.PowerShell_profile.ps1 to $($script:UltimatePSProfile.mydocuments_path)\WindowsPowerShell\ or $($script:UltimatePSProfile.mydocuments_path)\PowerShell\"
+        Write-Output "Error copying profile from $($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1 to $($script:UltimatePSProfile.mydocuments_path)\WindowsPowerShell\ or $($script:UltimatePSProfile.mydocuments_path)\PowerShell\"
     }
 } else {
     Write-Output "Profile already exists. Run Install-Profile to update Ultimate PowerShell Profile from $($script:UltimatePSProfile.psprofile_link)"
@@ -66,21 +81,39 @@ $Host.UI.RawUI.WindowTitle = "PowerShell {0}" -f $PSVersionTable.PSVersion.ToStr
 #--------------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------------
+#Set some PowerShell settings that can help to reduce errors
+#https://github.com/MicrosoftDocs/PowerShell-Docs/blob/main/reference/5.1/Microsoft.PowerShell.Core/About/about_Preference_Variables.md
+if($PSVersionTable.PSVersion.Major -eq 5 ) {
+    $MaximumFunctionCount = 8192
+    $MaximumVariableCount = 8192
+}
+#--------------------------------------------------------------------------------------
+
+#--------------------------------------------------------------------------------------
 #Set variables for user and admin status
-$script:identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-$script:principal = New-Object Security.Principal.WindowsPrincipal $script:identity
-$script:isAdmin = $script:principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+    $script:identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $script:principal = New-Object Security.Principal.WindowsPrincipal $script:identity
+    $script:isAdmin = $script:principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
 
 #Run commands only in admin terminals
 if($script:isAdmin) {
-    Function edithosts {notepad.exe "$env:SystemRoot\System32\drivers\etc\hosts"}
+    if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+        Function edithosts {notepad.exe "$env:SystemRoot\System32\drivers\etc\hosts"}
+    }
     $Host.UI.RawUI.WindowTitle += " [ADMIN]"
 }
 #--------------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------------
 #Set PowerShell Gallery as a trusted source for module installation
-Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+if (Get-Module -ListAvailable -Name PowerShellGet) {
+    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+    Write-Output "Set PSGallery source (https://www.powershellgallery.com/) as trusted"
+} else {
+    Write-Output "PowerShellGet PowerShell module not installed. Run Install-Module -Name PowerShellGet -Scope AllUsers"
+}
 #--------------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------------
@@ -99,64 +132,79 @@ if($host.Name -eq 'ConsoleHost') {
 
 #--------------------------------------------------------------------------------------
 #Oh-my-posh setup
-if(Get-Command oh-my-posh) {
-    if($PSVersionTable.PSVersion.Major -eq 5 ) {
-        oh-my-posh.exe prompt init powershell --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
-        Enable-PoshTransientPrompt
-        Write-Output "Enabled oh-my-posh for Windows PowerShell"
-    } 
-    if($PSVersionTable.PSVersion.Major -eq 7 ) {
-        oh-my-posh.exe prompt init pwsh --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
-        Enable-PoshTransientPrompt
-        Write-Output "Enabled oh-my-posh for Windows PowerShell 7"
+if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+    if(Get-Command oh-my-posh) {
+        if($PSVersionTable.PSVersion.Major -eq 5 ) {
+            oh-my-posh.exe prompt init powershell --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
+            Enable-PoshTransientPrompt
+            Write-Output "Enabled oh-my-posh for Windows PowerShell"
+        } 
+        if($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
+            oh-my-posh.exe prompt init pwsh --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
+            Enable-PoshTransientPrompt
+            Write-Output "Enabled oh-my-posh for Windows PowerShell 7"
+        }
+    } else {
+        Write-Output "Oh-my-posh not installed. No fancy prompt for you."
     }
 }
 #--------------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------------
-# Set Directory traversal functions
-Function cd... { Set-Location ..\.. }
-Function cd.... { Set-Location ..\..\.. }
-Function cddrivers {Set-Location -Path $env:SystemRoot\System32\Drivers}
-Function cdwpt {Set-Location -Path "${env:ProgramFiles(x86)}\Windows Kits\10\Windows Performance Toolkit\"}
-Function cdrepos {Set-Location -Path $script:UltimatePSProfile.gh_repo_base_folder}
-Function cdsystemp {Set-Location -Path $script:UltimatePSProfile.system_temp}
-Function cdusertemp {Set-Location -Path $env:TEMP}
-Function cduser {Set-Location -Path $env:USERPROFILE}
-Function cddesktop {Set-Location -Path ([System.Environment]::GetFolderPath('Desktop'))}
-Function cddownloads {Set-Location -Path $env:USERPROFILE\Downloads} #Lazy, don't really want to use pinvoke just for this
+# Set Windows Directory traversal functions
+if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+    Function cd... { Set-Location ..\.. }
+    Function cd.... { Set-Location ..\..\.. }
+    Function cddrivers {Set-Location -Path $env:SystemRoot\System32\Drivers}
+    if (Test-Path -Path "${env:ProgramFiles(x86)}\Windows Kits\10\Windows Performance Toolkit\") {
+        Function cdwpt {Set-Location -Path "${env:ProgramFiles(x86)}\Windows Kits\10\Windows Performance Toolkit\"}
+    }
+    Function cdrepos {Set-Location -Path $script:UltimatePSProfile.gh_repo_base_folder}
+    Function cdsystemp {Set-Location -Path $script:UltimatePSProfile.system_temp}
+    Function cdusertemp {Set-Location -Path $env:TEMP}
+    Function cduser {Set-Location -Path $env:USERPROFILE}
+    Function cddesktop {Set-Location -Path ([System.Environment]::GetFolderPath('Desktop'))}
+    Function cddownloads {Set-Location -Path $env:USERPROFILE\Downloads} #Lazy, don't really want to use pinvoke just for this
+}
 #--------------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------------
 #Other usefull functions
 Function uptime {
-    if($PSVersionTable.PSVersion.Major -eq 5 ) {
+    if ($PSVersionTable.PSVersion.Major -eq 5 ) {
 		Get-WmiObject win32_operatingsystem |
         Select-Object @{EXPRESSION={ $_.ConverttoDateTime($_.lastbootuptime)}} | Format-Table -HideTableHeaders
 	}
-    if($PSVersionTable.PSVersion.Major -eq 7 ) {
+    if ($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
         net statistics workstation | Select-String "since" | foreach-object {$_.ToString().Replace('Statistics since ', '')}
+    }
+    if ($IsLinux) {
+        Remove-Item -Path Function:\uptime
     }
 }
 Function Get-PubIP {
     (Invoke-WebRequest http://ifconfig.me/ip ).Content
 }
-Function n { notepad.exe $args }
-Function n++ {
-    $npp=(Get-Itemproperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\notepad++.exe")
-    Start-Process -FilePath ($npp.'(default)') -ArgumentList $args
-}
-Function tm { taskmgr.exe }
 
+if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+    Function n { notepad.exe $args }
+    Function n++ {
+        $npp=(Get-Itemproperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\notepad++.exe")
+        Start-Process -FilePath ($npp.'(default)') -ArgumentList $args
+    }
+    Function tm { taskmgr.exe }
+}
 #Compute file hashes - useful for checking successful downloads 
 Function md5 { Get-FileHash -Algorithm MD5 $args }
 Function sha1 { Get-FileHash -Algorithm SHA1 $args }
 Function sha256 { Get-FileHash -Algorithm SHA256 $args }
 
-#Drive shortcuts
-Function HKLM: { Set-Location HKLM: }
-Function HKCU: { Set-Location HKCU: }
-Function Env: { Set-Location Env: }
+if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+    #Drive shortcuts
+    Function HKLM: { Set-Location HKLM: }
+    Function HKCU: { Set-Location HKCU: }
+    Function Env: { Set-Location Env: }
+}
 
 #Does the the rough equivalent of dir /s /b. For example, dirs *.png is dir /s /b *.png
 Function dirs {
@@ -180,52 +228,52 @@ Function find-file($name) {
         Write-Output "${place_path}\${_}"
     }
 }
-#Simple Function to start a new elevated process. If arguments are supplied, then 
-#a single command is started with admin rights; if not, then a new admin instance of PowerShell is started.
-Function admin {
-    if($PSVersionTable.PSVersion.Major -eq 5 ) {
-        if($args.Count -gt 0) {   
-            $argList = "& '" + $args + "'"
-            Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $argList
-        } else {
-            Start-Process "$psHome\powershell.exe" -Verb runAs
+
+if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+    #Simple Function to start a new elevated process. If arguments are supplied, then 
+    #a single command is started with admin rights; if not, then a new admin instance of PowerShell is started.
+    Function admin {
+        if($PSVersionTable.PSVersion.Major -eq 5 ) {
+            if($args.Count -gt 0) {   
+                $argList = "& '" + $args + "'"
+                Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $argList
+            } else {
+                Start-Process "$psHome\powershell.exe" -Verb runAs
+            }
         }
-    }
-    if($PSVersionTable.PSVersion.Major -eq 7 ) {
-        if($args.Count -gt 0) {   
-            $argList = "& '" + $args + "'"
-            Start-Process "$psHome\pwsh.exe" -Verb runAs -ArgumentList $argList
-        } else {
-            Start-Process "$psHome\pwsh.exe" -Verb runAs
+        if($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
+            if($args.Count -gt 0) {   
+                $argList = "& '" + $args + "'"
+                Start-Process "$psHome\pwsh.exe" -Verb runAs -ArgumentList $argList
+            } else {
+                Start-Process "$psHome\pwsh.exe" -Verb runAs
+            }
         }
     }
 }
-
 #--------------------------------------------------------------------------------------
 #Commands to manage this profile
 #Make it easy to edit this profile once it's installed
 Function Install-Profile {
-    if(Test-Path -Path "$env:USERPROFILE\Downloads\Microsoft.PowerShell_profile.ps1") {
-        try {
-            Remove-Item -Path "$env:USERPROFILE\Downloads\Microsoft.PowerShell_profile.ps1" -Force
-            Write-Host "Removed previous profile download. $env:USERPROFILE\Downloads\Microsoft.PowerShell_profile.ps1"
-        } catch {
-            Write-Host "Error removing profile. $env:USERPROFILE\Downloads\Microsoft.PowerShell_profile.ps1"
-        }
+    try {
+        #Use My Documents for the download because Downloads path is not available unless you use p/invoke
+        Invoke-WebRequest -Uri $script:UltimatePSProfile.psprofile_link -OutFile "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1"
+        Write-Output "Downloaded profile from $($script:UltimatePSProfile.psprofile_link)"
+    } catch {
+        Write-Output "Error downloading profile from $($script:UltimatePSProfile.psprofile_link)"
     }
     try {
-        Invoke-WebRequest -Uri $script:UltimatePSProfile.psprofile_link -OutFile "$env:USERPROFILE\Downloads\Microsoft.PowerShell_profile.ps1"
-        Write-Output "Downloaded profile from $script:UltimatePSProfile.psprofile_link"
-        if($script:UltimatePSProfile.is_onedrive) {
-            Copy-Item -Path "$env:USERPROFILE\Downloads\Microsoft.PowerShell_profile.ps1" -Destination "$env:ONEDRIVE\Documents\WindowsPowerShell\" -Force -Verbose
-            Copy-Item -Path "$env:USERPROFILE\Downloads\Microsoft.PowerShell_profile.ps1" -Destination "$env:ONEDRIVE\Documents\PowerShell\" -Force -Verbose
+        if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+            Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)WindowsPowerShell" -Force -Verbose
+            Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)PowerShell" -Force -Verbose
         } else {
-            Copy-Item -Path "$env:USERPROFILE\Downloads\Microsoft.PowerShell_profile.ps1" -Destination "$env:USERPROFILE\Documents\WindowsPowerShell\" -Force -Verbose
-            Copy-Item -Path "$env:USERPROFILE\Downloads\Microsoft.PowerShell_profile.ps1" -Destination "$env:USERPROFILE\Documents\PowerShell\" -Force -Verbose
+            if ($IsLinux) {
+                Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$profile.CurrentUserCurrentHost" -Force -Verbose
+            }
         }
-        reload-profile
-    } catch {
-        Write-Output "Error downloading profile from $script:UltimatePSProfile.psprofile_link"
+    }
+    catch {
+        Write-Output "Error copying profile from $($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1 to $($script:UltimatePSProfile.mydocuments_path)WindowsPowerShell or $($script:UltimatePSProfile.mydocuments_path)PowerShell"
     }
 }
 
@@ -238,86 +286,94 @@ Function Edit-Profile {
     }
 }
 
-#Just reload the profile in the current window
-Function Sync-Profile {
-    & $profile
-}
-Set-Alias -Name Restore-Profile -Value Sync-Profile
-
 #Copy this file from a local GitHub repo folder to the Windows PowerShell and PowerShell folders
-Function Copy-Profiles {
+Function Copy-ProfilesFromLocalRepo {
     try {
-        Write-Output "Copying profile to folder folders."
-        Copy-Item -Path "$($script:UltimatePSProfile.psprofile_repo_path)\Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)\WindowsPowerShell\" -Force -Verbose
-        Copy-Item -Path "$($script:UltimatePSProfile.psprofile_repo_path)\Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)\PowerShell\" -Force -Verbose
+        Write-Output "Copying profile to PowerShell folders."
+        if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+            Copy-Item -Path "$($script:UltimatePSProfile.psprofile_repo_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)WindowsPowerShell" -Force -Verbose
+            Copy-Item -Path "$($script:UltimatePSProfile.psprofile_repo_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)PowerShell" -Force -Verbose
+        } else {
+            if ($IsLinux) {
+                Copy-Item -Path "$($script:UltimatePSProfile.psprofile_repo_path)Microsoft.PowerShell_profile.ps1" -Destination "$profile.CurrentUserCurrentHost" -Force -Verbose
+            }
+        }
     }
     catch {
         Write-Output "Error copying profile to PowerShell profile folders."
     }
 }
+
+#Just reload the profile in the current window
+Function Sync-Profile {
+    & $profile
+}
+Set-Alias -Name Restore-Profile -Value Sync-Profile
 #--------------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------------
 #Linux-Like functions and commands
 #Set UNIX-like aliases for the admin command, so sudo <command> will run the command
-#with elevated rights. 
-Set-Alias -Name su -Value admin
-Set-Alias -Name sudo -Value admin
-Function touchuni($file) {
-    "" | Out-File $file -Encoding unicode
-}
-Function touchutf8($file) {
-    "" | Out-File $file -Encoding ascii
-}
-Function df {
-    Get-Volume
-}
-Function disks {
-    Get-PhysicalDisk
-}
-Function pkill($name) {
-    Get-Process $name -ErrorAction SilentlyContinue | Stop-Process -Force
-}
-Function head($file, $rows) {
-    Get-Content -Head $rows -Path $file
-}
-Function tail($file, $rows) {
-    Get-Content -Tail $rows -Path $file
-}
-Function grepstr {
-    [CmdletBinding()]
-    param(
-      [Parameter(Mandatory=$true,ValueFromPipeline = $true)]
-      [AllowEmptyString()]
-      [string] $InputObject,
-      [Parameter(Mandatory=$true)]
-      [string] $SearchString
-    )
-    $InputObject | Select-String -Pattern $SearchString -SimpleMatch
-}
-Function grepfile {
-    param(
-      [Parameter(Mandatory=$true)]
-      [AllowEmptyString()]
-      [string] $Path,
-      [Parameter(Mandatory=$true)]
-      [string] $SearchString
-    )
-    Get-Content -Path $Path | Select-String -Pattern $SearchString -SimpleMatch
-}
-Function ipconfig() {
-    ipconfig.exe /all
-}
-Function cleardns() {
-    ipconfig.exe /flushdns
+#with elevated rights.
+if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+    Set-Alias -Name su -Value admin
+    Set-Alias -Name sudo -Value admin
+    Function touchuni($file) {
+        "" | Out-File $file -Encoding unicode
+    }
+    Function touchutf8($file) {
+        "" | Out-File $file -Encoding ascii
+    }
+    Function df {
+        Get-Volume
+    }
+    Function disks {
+        Get-PhysicalDisk
+    }
+    Function pkill($name) {
+        Get-Process $name -ErrorAction SilentlyContinue | Stop-Process -Force
+    }
+    Function head($file, $rows) {
+        Get-Content -Head $rows -Path $file
+    }
+    Function tail($file, $rows) {
+        Get-Content -Tail $rows -Path $file
+    }
+    Function grepstr {
+        [CmdletBinding()]
+        param(
+        [Parameter(Mandatory=$true,ValueFromPipeline = $true)]
+        [AllowEmptyString()]
+        [string] $InputObject,
+        [Parameter(Mandatory=$true)]
+        [string] $SearchString
+        )
+        $InputObject | Select-String -Pattern $SearchString -SimpleMatch
+    }
+    Function grepfile {
+        param(
+        [Parameter(Mandatory=$true)]
+        [string] $Path,
+        [Parameter(Mandatory=$true)]
+        [string] $SearchString
+        )
+        Get-Content -Path $Path | Select-String -Pattern $SearchString -SimpleMatch
+    }
+    Function ipconfig() {
+        ipconfig.exe /all
+    }
+    Function cleardns() {
+        ipconfig.exe /flushdns
+    }
 }
 #--------------------------------------------------------------------------------------
 
+function InstallandLoadModules() {
 #--------------------------------------------------------------------------------------
 #Install PowerShell modules if the script execution time is within limit
 #Need to run the global module installs in an administrator PowerShell.
 #Check to make sure profile load stays fast. If script has executed > the set limit don't worry about installing modules that are not available
-if($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:UltimatePSProfile.max_profileload_seconds * 1000)) {
+
     if($script:isAdmin) {
         foreach($global_module in $script:UltimatePSProfile.global_modules) {
             if(-not(Get-Module -ListAvailable -Name $global_module)) {
@@ -339,10 +395,14 @@ if($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimate
             Write-Output "$module already loaded"
         }
     }
+}
+#--------------------------------------------------------------------------------------
+
+if($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:UltimatePSProfile.max_profileload_seconds * 1000)) {
+    InstallandLoadModules
 } else {
     Write-Output "Skipping module installs as the profile took > $($script:UltimatePSProfile.max_profileload_seconds) seconds to load."
 }
-#--------------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------------
 #Remind user which functions are available in the console

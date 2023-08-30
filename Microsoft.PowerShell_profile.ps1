@@ -447,3 +447,4 @@ Get-ChildItem -Path Function:\ | Where-Object{$_.Source.ToString().Length -lt 1}
 
 #Don't forget to stop the stopwatch
 $script:UltimatePSProfile.stopwatch.stop()
+if ($IsLinux) { Write-Output "Loading personal and system profiles took $($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds) ms." }

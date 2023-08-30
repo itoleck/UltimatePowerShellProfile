@@ -34,7 +34,7 @@ $script:UltimatePSProfile = [PSCustomObject]@{
     oh_my_posh_theme = ""
     gh_repo_base_folder = ""
     system_temp = ""
-    global_modules = 'Az','AzureAD','MSOnline','Az.CostManagement','Microsoft.Graph'
+    global_modules = 'Az','Az.Accounts','AzureAD','MSOnline','Az.CostManagement','Microsoft.Graph'
     local_modules = 'Terminal-Icons','Carbon','CredentialManager','PnP.PowerShell','ImportExcel','WifiTools','ExchangeOnlineManagement','MicrosoftTeams','PSScriptAnalyzer','AzureSaveMoney'
 }
 #--------------------------------------------------------------------------------------
@@ -53,7 +53,7 @@ if ($IsLinux) {
     $script:UltimatePSProfile.psprofile_repo_path = "$($script:UltimatePSProfile.mydocuments_path)/source/repos/itoleck/UltimatePowerShellProfile/"
     $script:UltimatePSProfile.gh_repo_base_folder = "$($script:UltimatePSProfile.mydocuments_path)/source/repos/"
     $script:UltimatePSProfile.system_temp = "/tmp/"
-    $script:UltimatePSProfile.mydocuments_path = $script:UltimatePSProfile.mydocuments_path + "/"
+    $script:UltimatePSProfile.mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "/"
 }
 
 #--------------------------------------------------------------------------------------

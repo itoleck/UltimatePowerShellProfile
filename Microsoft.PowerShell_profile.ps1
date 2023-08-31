@@ -39,7 +39,6 @@ Function CreateUltimatePSProfileVars {
         profile_editors = 'code','powershell_ise.exe','notepad++.exe','notepad.exe','nano'
     }
 }
-CreateUltimatePSProfileVars
 
 #--------------------------------------------------------------------------------------
 #Set some paths if this session is running in Windows
@@ -60,7 +59,6 @@ Function SetScriptPaths {
         $script:UltimatePSProfile.mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "/"
     }
 }
-SetScriptPaths
 
 #--------------------------------------------------------------------------------------
 #Create this profile from GH if it does not exist
@@ -97,14 +95,12 @@ Function CreateProfileIfNotExist {
         Write-Output "Profile already exists. Run Install-Profile to update Ultimate PowerShell Profile from $($script:UltimatePSProfile.psprofile_link)"
     }
 }
-CreateProfileIfNotExist
 
 #--------------------------------------------------------------------------------------
 #Setup command window title. Gets overwritten in Windows Terminal.
 Function SetWindowTitle {
     $Host.UI.RawUI.WindowTitle = "PowerShell {0} Running in {1}" -f $PSVersionTable.PSVersion.ToString(), $Host.Name
 }
-SetWindowTitle
 
 #--------------------------------------------------------------------------------------
 #Set some PowerShell settings that can help to reduce module import errors
@@ -115,7 +111,6 @@ Function IncreasePowerShell5Counts {
         $MaximumVariableCount = 8192
     }
 }
-IncreasePowerShell5Counts
 
 #--------------------------------------------------------------------------------------
 #Set variables for user and admin status
@@ -130,7 +125,6 @@ Function SetAdminStatus {
         }
     }
 }
-SetAdminStatus
 
 #--------------------------------------------------------------------------------------
 #Run commands only in admin terminals
@@ -142,7 +136,6 @@ Function SetAdminCommands  {
         $Host.UI.RawUI.WindowTitle += " [ADMIN]"
     }
 }
-SetAdminCommands
 
 #--------------------------------------------------------------------------------------
 #Set PowerShell Gallery as a trusted source for module installation
@@ -154,7 +147,6 @@ Function SetPowerShellGalleryTrust {
         Write-Output "PowerShellGet PowerShell module not installed. Run Install-Module -Name PowerShellGet -Scope AllUsers"
     }
 }
-SetPowerShellGalleryTrust
 
 #--------------------------------------------------------------------------------------
 #Setup PSReadLine
@@ -170,7 +162,6 @@ Function StartPSReadLine {
         }
     }
 }
-StartPSReadLine
 
 #--------------------------------------------------------------------------------------
 #Oh-my-posh setup
@@ -194,7 +185,6 @@ Function StartOhMyPosh {
         Write-Output "PowerShell 7+ not running in Windows Console Host. Oh-my-posh not available."
     }
 }
-StartOhMyPosh
 
 #--------------------------------------------------------------------------------------
 # Set Windows Directory traversal functions
@@ -213,7 +203,6 @@ Function SetWindowsDirTraversal {
         Function cddownloads {Set-Location -Path $env:USERPROFILE\Downloads} #Lazy, don't really want to use pinvoke just for this
     }
 }
-SetWindowsDirTraversal
 
 #--------------------------------------------------------------------------------------
 #Commands to manage this profile
@@ -346,6 +335,19 @@ function InstallandLoadModules() {
         }
     }
 }
+
+#Begin script
+CreateUltimatePSProfileVars
+SetScriptPaths
+CreateProfileIfNotExist
+SetWindowTitle
+IncreasePowerShell5Counts
+SetAdminStatus
+SetAdminCommands
+SetPowerShellGalleryTrust
+StartPSReadLine
+StartOhMyPosh
+SetWindowsDirTraversal
 
 #--------------------------------------------------------------------------------------
 #Install extra functions if the script is still within load time limit

@@ -19,13 +19,17 @@
 
 #psprofile_repo_path        Local repo folder for this Ultimate PowerShell Profile. Used for the Copy-Profile command
 
-#global_modules             Which modules to load in this profile if the environment is admin(scope global)
+#global_modules             Which modules to load in this profile if the environment is admin(scope global) *Windows only
 #                           If forking this script and adding your own modules, please set back these defaults when submitting PR.
 
-#local_modules              Which modules to load in this profile if the environment is non-admin user (scope local)
+#local_modules              Which modules to load in this profile if the environment is non-admin user (scope local) *Windows only
+#                           If forking this script and adding your own modules, please set back these defaults when submitting PR.
+
+#linux_modules              Which modules to load in this profile if the environment is non-admin user (scope local) *Linux only
 #                           If forking this script and adding your own modules, please set back these defaults when submitting PR.
 
 #profile_editors            A list of text editors, in order of precedence.
+#                           If forking this script and adding your own editors, please set back these defaults when submitting PR.
 Function Private:CreateUltimatePSProfileVars {
     $script:UltimatePSProfile = [PSCustomObject]@{
         psprofile_link = "https://raw.githubusercontent.com/itoleck/UltimatePowerShellProfile/main/Microsoft.PowerShell_profile.ps1"

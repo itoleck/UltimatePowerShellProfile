@@ -361,16 +361,11 @@ SetWindowsDirTraversal
 #Install extra functions if the script is still within load time limit
 if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:UltimatePSProfile.max_profileload_seconds * 1000)) {
     #Other useful functions
-    Function uptime {
-        if ($PSVersionTable.PSVersion.Major -eq 5 ) {
-            Get-WmiObject win32_operatingsystem |
-            Select-Object @{EXPRESSION={ $_.ConverttoDateTime($_.lastbootuptime)}} | Format-Table -HideTableHeaders
-        }
-        if ($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
-            net statistics workstation | Select-String "since" | foreach-object {$_.ToString().Replace('Statistics since ', '')}
-        }
-        if ($IsLinux) {
-            uptime
+    Function os {
+        if ($IsWindows) {
+            [System.Environment]::OSVersion
+        } else {
+            uname -a
         }
     }
     Function Get-PubIP {
@@ -412,6 +407,15 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
 
         Set-Alias -Name su -Value admin
         Set-Alias -Name sudo -Value admin
+        Function uptime {
+            if ($PSVersionTable.PSVersion.Major -eq 5 ) {
+                Get-WmiObject win32_operatingsystem |
+                Select-Object @{EXPRESSION={ $_.ConverttoDateTime($_.lastbootuptime)}} | Format-Table -HideTableHeaders
+            }
+            if ($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
+                net statistics workstation | Select-String "since" | foreach-object {$_.ToString().Replace('Statistics since ', '')}
+            }
+        }
         Function touchuni($file) {
             "" | Out-File $file -Encoding unicode
         }

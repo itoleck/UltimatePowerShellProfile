@@ -389,7 +389,7 @@ function InstallandLoadModules() {
 #Need to run the global module installs in an administrator PowerShell.
 #Check to make sure profile load stays fast. If script has executed > the set limit don't worry about installing modules that are not available
 
-    if ($script:isAdmin -eq $true) {
+    if (($script:isAdmin -eq $true) -or $IsLinux) {
         foreach($global_module in $script:UltimatePSProfile.global_modules) {
             if (-not(Get-Module -ListAvailable -Name $global_module)) {
                 Write-Output "$global_module loading"

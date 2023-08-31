@@ -37,7 +37,8 @@ Function Private:CreateUltimatePSProfileVars {
         gh_repo_base_folder = ""
         system_temp = ""
         global_modules = 'Az','Az.Accounts','AzureAD','MSOnline','Az.CostManagement','Microsoft.Graph'
-        local_modules = 'Terminal-Icons','Carbon','CredentialManager','PnP.PowerShell','ImportExcel','WifiTools','ExchangeOnlineManagement','MicrosoftTeams','PSScriptAnalyzer','AzureSaveMoney'
+        local_modules = 'PowerShellGet','Terminal-Icons','Carbon','CredentialManager','PnP.PowerShell','ImportExcel','WifiTools','ExchangeOnlineManagement','MicrosoftTeams','PSScriptAnalyzer','AzureSaveMoney'
+        linux_modules = 'PowerShellGet'
         profile_editors = 'code','powershell_ise.exe','notepad++.exe','notepad.exe','nano'
     }
 }
@@ -284,18 +285,7 @@ function InstallandLoadModules() {
     #Just bypassing Linux root user/Global modules for now. Load them all in user/local
     if ($IsLinux) {
         $result_str = ""
-        foreach($global_module in $script:UltimatePSProfile.global_modules) {
-            if (-not(Get-Module -ListAvailable -Name $global_module)) {
-                $result_str = $result_str + "$global_module(Installing) "
-                Install-Module $global_module -Scope CurrentUser
-                Import-Module $global_module -Scope Local
-            } else {
-                $result_str = $result_str + "$global_module(Available) "
-            }
-        }
-        Write-Output $result_str
-        $result_str = ""
-        foreach ($module in $script:UltimatePSProfile.local_modules) {
+        foreach ($module in $script:UltimatePSProfile.linux_modules) {
             if (-not(Get-Module -ListAvailable -Name $module)) {
                 $result_str = $result_str + "$module(Installing) "
                 Install-Module $module -Scope CurrentUser

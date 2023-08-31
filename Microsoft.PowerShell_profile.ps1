@@ -39,16 +39,16 @@ $script:UltimatePSProfile = [PSCustomObject]@{
 }
 #--------------------------------------------------------------------------------------
 
-#Reset some paths if this session is running in Windows
+#Set some paths if this session is running in Windows
 if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
     $script:UltimatePSProfile.psprofile_repo_path = "$env:USERPROFILE\source\repos\itoleck\UltimatePowerShellProfile\"
     $script:UltimatePSProfile.gh_repo_base_folder = "$env:USERPROFILE\source\repos\"
-    $script:UltimatePSProfile.system_temp = "c:\temp\"
+    $script:UltimatePSProfile.system_temp = $env:TEMP + "\"
     $script:UltimatePSProfile.mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "\"
     $script:UltimatePSProfile.oh_my_posh_theme = "$env:APPDATA\Local\Programs\oh-my-posh\themes\agnoster.omp"
 }
 
-#Reset some paths if this session is running in Linux
+#Set some paths if this session is running in Linux
 if ($IsLinux) {
     $script:UltimatePSProfile.psprofile_repo_path = "$($script:UltimatePSProfile.mydocuments_path)/source/repos/itoleck/UltimatePowerShellProfile/"
     $script:UltimatePSProfile.gh_repo_base_folder = "$($script:UltimatePSProfile.mydocuments_path)/source/repos/"
@@ -57,8 +57,8 @@ if ($IsLinux) {
 }
 
 #--------------------------------------------------------------------------------------
-#Create this profile from GH ifit does not exist
-if(! (Test-Path -Path $PROFILE)) {
+#Create this profile from GH if it does not exist
+if (! (Test-Path -Path $PROFILE)) {
     try {
         #Use My Documents for the download because Downloads path is not available unless you use pinvoke 
         Invoke-WebRequest -Uri $script:UltimatePSProfile.psprofile_link -OutFile "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1"
@@ -96,9 +96,9 @@ $Host.UI.RawUI.WindowTitle = "PowerShell {0}" -f $PSVersionTable.PSVersion.ToStr
 #--------------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------------
-#Set some PowerShell settings that can help to reduce errors
+#Set some PowerShell settings that can help to reduce module import errors
 #https://github.com/MicrosoftDocs/PowerShell-Docs/blob/main/reference/5.1/Microsoft.PowerShell.Core/About/about_Preference_Variables.md
-if($PSVersionTable.PSVersion.Major -eq 5 ) {
+if ($PSVersionTable.PSVersion.Major -eq 5 ) {
     $MaximumFunctionCount = 8192
     $MaximumVariableCount = 8192
 }
@@ -110,10 +110,14 @@ if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
     $script:identity = [Security.Principal.WindowsIdentity]::GetCurrent()
     $script:principal = New-Object Security.Principal.WindowsPrincipal $script:identity
     $script:isAdmin = $script:principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+} else {
+    if ($IsLinux -and (id -u) -eq 0) {
+        $script:isAdmin = $true
+    }
 }
 
 #Run commands only in admin terminals
-if($script:isAdmin) {
+if ($script:isAdmin -eq $true) {
     if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
         Function edithosts {notepad.exe "$env:SystemRoot\System32\drivers\etc\hosts"}
     }
@@ -133,8 +137,8 @@ if (Get-Module -ListAvailable -Name PowerShellGet) {
 
 #--------------------------------------------------------------------------------------
 #Setup PSReadLine
-if($host.Name -eq 'ConsoleHost') {
-    if(-not(Get-Module -ListAvailable -Name PSReadLine)) {
+if ($host.Name -eq 'ConsoleHost') {
+    if (-not(Get-Module -ListAvailable -Name PSReadLine)) {
         Install-Module PSReadLine -Scope CurrentUser -AllowPrerelease
         Import-Module PSReadLine -Scope Local -AllowPrerelease
         Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
@@ -148,13 +152,13 @@ if($host.Name -eq 'ConsoleHost') {
 #--------------------------------------------------------------------------------------
 #Oh-my-posh setup
 if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
-    if(Get-Command oh-my-posh) {
-        if($PSVersionTable.PSVersion.Major -eq 5 ) {
+    if (Get-Command oh-my-posh) {
+        if ($PSVersionTable.PSVersion.Major -eq 5 ) {
             oh-my-posh.exe prompt init powershell --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
             Enable-PoshTransientPrompt
             Write-Output "Enabled oh-my-posh for Windows PowerShell"
         } 
-        if($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
+        if ($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
             oh-my-posh.exe prompt init pwsh --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
             Enable-PoshTransientPrompt
             Write-Output "Enabled oh-my-posh for Windows PowerShell 7"
@@ -175,8 +179,7 @@ if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
         Function cdwpt {Set-Location -Path "${env:ProgramFiles(x86)}\Windows Kits\10\Windows Performance Toolkit\"}
     }
     Function cdrepos {Set-Location -Path $script:UltimatePSProfile.gh_repo_base_folder}
-    Function cdsystemp {Set-Location -Path $script:UltimatePSProfile.system_temp}
-    Function cdusertemp {Set-Location -Path $env:TEMP}
+    Function cdtemp {Set-Location -Path $script:UltimatePSProfile.system_temp}
     Function cduser {Set-Location -Path $env:USERPROFILE}
     Function cddesktop {Set-Location -Path ([System.Environment]::GetFolderPath('Desktop'))}
     Function cddownloads {Set-Location -Path $env:USERPROFILE\Downloads} #Lazy, don't really want to use pinvoke just for this
@@ -220,7 +223,7 @@ if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
 
 #Does the the rough equivalent of dir /s /b. For example, dirs *.png is dir /s /b *.png
 Function dirs {
-    if($args.Count -gt 0) {
+    if ($args.Count -gt 0) {
         Get-ChildItem -Recurse -Include "$args" | Foreach-Object FullName
     } else {
         Get-ChildItem -Recurse | Foreach-Object FullName
@@ -245,16 +248,16 @@ if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
     #Simple Function to start a new elevated process. If arguments are supplied, then 
     #a single command is started with admin rights; if not, then a new admin instance of PowerShell is started.
     Function admin {
-        if($PSVersionTable.PSVersion.Major -eq 5 ) {
-            if($args.Count -gt 0) {   
+        if ($PSVersionTable.PSVersion.Major -eq 5 ) {
+            if ($args.Count -gt 0) {   
                 $argList = "& '" + $args + "'"
                 Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $argList
             } else {
                 Start-Process "$psHome\powershell.exe" -Verb runAs
             }
         }
-        if($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
-            if($args.Count -gt 0) {   
+        if ($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
+            if ($args.Count -gt 0) {   
                 $argList = "& '" + $args + "'"
                 Start-Process "$psHome\pwsh.exe" -Verb runAs -ArgumentList $argList
             } else {
@@ -291,7 +294,7 @@ Function Install-Profile {
 
 #Open this profile in PowerShell ISE or Notepad if ISE is not running
 Function Edit-Profile {
-    if($host.Name -match "ise") {
+    if ($host.Name -match "ise") {
         $psISE.CurrentPowerShellTab.Files.Add($profile.CurrentUserCurrentHost)
     } else {
         notepad.exe $profile.CurrentUserCurrentHost
@@ -386,9 +389,9 @@ function InstallandLoadModules() {
 #Need to run the global module installs in an administrator PowerShell.
 #Check to make sure profile load stays fast. If script has executed > the set limit don't worry about installing modules that are not available
 
-    if($script:isAdmin -or $IsLinux) {
+    if ($script:isAdmin -eq $true) {
         foreach($global_module in $script:UltimatePSProfile.global_modules) {
-            if(-not(Get-Module -ListAvailable -Name $global_module)) {
+            if (-not(Get-Module -ListAvailable -Name $global_module)) {
                 Write-Output "$global_module loading"
                 Install-Module $global_module -Scope AllUsers
                 Import-Module $global_module -Scope Global
@@ -398,8 +401,8 @@ function InstallandLoadModules() {
         }
     }
 
-    foreach($module in $script:UltimatePSProfile.local_modules) {
-        if(-not(Get-Module -ListAvailable -Name $module)) {
+    foreach ($module in $script:UltimatePSProfile.local_modules) {
+        if (-not(Get-Module -ListAvailable -Name $module)) {
             Write-Output "$module loading"
             Install-Module $module -Scope CurrentUser
             Import-Module $module -Scope Local
@@ -410,7 +413,7 @@ function InstallandLoadModules() {
 }
 #--------------------------------------------------------------------------------------
 
-if($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:UltimatePSProfile.max_profileload_seconds * 1000)) {
+if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:UltimatePSProfile.max_profileload_seconds * 1000)) {
     InstallandLoadModules
 } else {
     Write-Output "Skipping module installs as the profile took > $($script:UltimatePSProfile.max_profileload_seconds) seconds to load."
@@ -447,4 +450,7 @@ Get-ChildItem -Path Function:\ | Where-Object{$_.Source.ToString().Length -lt 1}
 
 #Don't forget to stop the stopwatch
 $script:UltimatePSProfile.stopwatch.stop()
-if ($IsLinux) { Write-Output "Loading personal and system profiles took $($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds) ms." }
+if ($IsLinux) {
+    Write-Output "Loading personal and system profiles took $($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds) ms."
+    [Environment]::GetEnvironmentVariable('MOTD_SHOWN')
+}

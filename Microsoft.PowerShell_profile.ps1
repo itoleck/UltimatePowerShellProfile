@@ -129,17 +129,6 @@ Function Private:SetAdminStatus {
 }
 
 #--------------------------------------------------------------------------------------
-#Run commands only in admin terminals
-Function Private:SetAdminCommands  {
-    if ($script:isAdmin -eq $true) {
-        if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
-            Function edithosts {notepad.exe "$env:SystemRoot\System32\drivers\etc\hosts"}
-        }
-        $Host.UI.RawUI.WindowTitle += " [ADMIN]"
-    }
-}
-
-#--------------------------------------------------------------------------------------
 #Set PowerShell Gallery as a trusted source for module installation
 Function Private:SetPowerShellGalleryTrust {
     if (Get-Module -ListAvailable -Name PowerShellGet) {
@@ -351,7 +340,6 @@ CreateProfileIfNotExist
 SetWindowTitle
 IncreasePowerShell5Counts
 SetAdminStatus
-SetAdminCommands
 SetPowerShellGalleryTrust
 StartPSReadLine
 StartOhMyPosh
@@ -361,6 +349,14 @@ SetWindowsDirTraversal
 #Install extra functions if the script is still within load time limit
 if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:UltimatePSProfile.max_profileload_seconds * 1000)) {
     #Other useful functions
+    if ($script:isAdmin -eq $true) {
+        if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
+            Function edithosts {notepad.exe "$env:SystemRoot\System32\drivers\etc\hosts"}
+        } else {
+            Function edithosts {nano}
+        }
+        $Host.UI.RawUI.WindowTitle += " [ADMIN]"
+    }
     Function os {
         if ($IsWindows) {
             [System.Environment]::OSVersion

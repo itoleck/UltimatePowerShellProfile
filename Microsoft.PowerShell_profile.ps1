@@ -60,8 +60,8 @@ Function Private:SetScriptPaths {
 
     #Set some paths if this session is running in Linux
     if ($IsLinux) {
-        $script:UltimatePSProfile.psprofile_repo_path = "$($script:UltimatePSProfile.mydocuments_path)/source/repos/itoleck/UltimatePowerShellProfile/"
-        $script:UltimatePSProfile.gh_repo_base_folder = "$($script:UltimatePSProfile.mydocuments_path)/source/repos/"
+        $script:UltimatePSProfile.psprofile_repo_path = [System.Environment]::GetFolderPath('Personal') + "/source/repos/itoleck/UltimatePowerShellProfile/"
+        $script:UltimatePSProfile.gh_repo_base_folder = [System.Environment]::GetFolderPath('Personal') + "/source/repos/"
         $script:UltimatePSProfile.system_temp = "/tmp/"
         $script:UltimatePSProfile.mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "/"
     }

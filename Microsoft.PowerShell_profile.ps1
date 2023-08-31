@@ -389,25 +389,48 @@ function InstallandLoadModules() {
 #Need to run the global module installs in an administrator PowerShell.
 #Check to make sure profile load stays fast. If script has executed > the set limit don't worry about installing modules that are not available
 
-    if (($script:isAdmin -eq $true) -or $IsLinux) {
+    #Just bypassing Linux root user/Global modules for now. Load them all in user/local
+    if ($IsLinux) {
         foreach($global_module in $script:UltimatePSProfile.global_modules) {
             if (-not(Get-Module -ListAvailable -Name $global_module)) {
                 Write-Output "$global_module loading"
-                Install-Module $global_module -Scope AllUsers
-                Import-Module $global_module -Scope Global
+                Install-Module $global_module -Scope CurrentUser
+                Import-Module $global_module -Scope Local
             } else {
                 Write-Output "$global_module already loaded"
             }
         }
-    }
 
-    foreach ($module in $script:UltimatePSProfile.local_modules) {
-        if (-not(Get-Module -ListAvailable -Name $module)) {
-            Write-Output "$module loading"
-            Install-Module $module -Scope CurrentUser
-            Import-Module $module -Scope Local
-        } else {
-            Write-Output "$module already loaded"
+        foreach ($module in $script:UltimatePSProfile.local_modules) {
+            if (-not(Get-Module -ListAvailable -Name $module)) {
+                Write-Output "$module loading"
+                Install-Module $module -Scope CurrentUser
+                Import-Module $module -Scope Local
+            } else {
+                Write-Output "$module already loaded"
+            }
+        }
+    } else {
+        if ($script:isAdmin -eq $true) {
+            foreach($global_module in $script:UltimatePSProfile.global_modules) {
+                if (-not(Get-Module -ListAvailable -Name $global_module)) {
+                    Write-Output "$global_module loading"
+                    Install-Module $global_module -Scope AllUsers
+                    Import-Module $global_module -Scope Global
+                } else {
+                    Write-Output "$global_module already loaded"
+                }
+            }
+        }
+
+        foreach ($module in $script:UltimatePSProfile.local_modules) {
+            if (-not(Get-Module -ListAvailable -Name $module)) {
+                Write-Output "$module loading"
+                Install-Module $module -Scope CurrentUser
+                Import-Module $module -Scope Local
+            } else {
+                Write-Output "$module already loaded"
+            }
         }
     }
 }

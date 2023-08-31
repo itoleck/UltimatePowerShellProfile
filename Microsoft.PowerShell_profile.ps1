@@ -1,5 +1,5 @@
-#The Ultimate PowerShell Profile. Sets up environment for Windows PowerShell (5) and PowerShell 7+ profiles.
-#Copies itself to the default PowerShell folders from Github URL in the $script:UltimatePSProfile.psprofile_link variable.
+#The Ultimate PowerShell Profile. Sets up environment for Windows PowerShell (5) and PowerShell 7+ profiles on Windows and Linux.
+#Copies itself to the default PowerShell folders from GitHub URL in the $script:UltimatePSProfile.psprofile_link variable.
 #Will measure it's own performance and skip parts like looking for new module versions if the profile is taking too long to load.
 #Adds some shortcuts for Linux-Like terminal operation in Windows.
 #Only runs admin functions when the session is run as admin.
@@ -13,18 +13,20 @@
 
 #stopwatch                  Start tracking the time that the script is running
 
-#max_profileload_seconds    Set the maximum time in seconds to determine ifthe profile should look to install modules that are not available in the profile
+#max_profileload_seconds    Set the maximum time in seconds to determine if the profile should look to install modules that are not available in the profile
 
-#psprofile_link             PowerShell profile URL. You can copy the code in this script and create a Github. Update this property.
+#psprofile_link             PowerShell profile URL. You can copy the code in this script and create a GitHub. Update this property.
 
 #psprofile_repo_path        Local repo folder for this Ultimate PowerShell Profile. Used for the Copy-Profile command
 
-#global_modules             Which modules to load in this profile ifthe environment is admin(scope global)
-#                           If forking this script and adding your own modules, please set back these defaults when subimitting PR.
+#global_modules             Which modules to load in this profile if the environment is admin(scope global)
+#                           If forking this script and adding your own modules, please set back these defaults when submitting PR.
 
-#local_modules              Which modules to load in this profile ifthe environment is non-admin user (scope local)
-#                           If forking this script and adding your own modules, please set back these defaults when subimitting PR.
-Function CreateUltimatePSProfileVars {
+#local_modules              Which modules to load in this profile if the environment is non-admin user (scope local)
+#                           If forking this script and adding your own modules, please set back these defaults when submitting PR.
+
+#profile_editors            A list of text editors, in order of precedence.
+Function Private:CreateUltimatePSProfileVars {
     $script:UltimatePSProfile = [PSCustomObject]@{
         psprofile_link = "https://raw.githubusercontent.com/itoleck/UltimatePowerShellProfile/main/Microsoft.PowerShell_profile.ps1"
         psprofile_repo_path = ""
@@ -42,7 +44,7 @@ Function CreateUltimatePSProfileVars {
 
 #--------------------------------------------------------------------------------------
 #Set some paths if this session is running in Windows
-Function SetScriptPaths {
+Function Private:SetScriptPaths {
     if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
         $script:UltimatePSProfile.psprofile_repo_path = "$env:USERPROFILE\source\repos\itoleck\UltimatePowerShellProfile\"
         $script:UltimatePSProfile.gh_repo_base_folder = "$env:USERPROFILE\source\repos\"
@@ -62,7 +64,7 @@ Function SetScriptPaths {
 
 #--------------------------------------------------------------------------------------
 #Create this profile from GH if it does not exist
-Function CreateProfileIfNotExist {
+Function Private:CreateProfileIfNotExist {
     if (!(Test-Path -Path $PROFILE)) {
         try {
             #Use My Documents for the download because Downloads path is not available unless you use pinvoke 
@@ -98,14 +100,14 @@ Function CreateProfileIfNotExist {
 
 #--------------------------------------------------------------------------------------
 #Setup command window title. Gets overwritten in Windows Terminal.
-Function SetWindowTitle {
+Function Private:SetWindowTitle {
     $Host.UI.RawUI.WindowTitle = "PowerShell {0} Running in {1}" -f $PSVersionTable.PSVersion.ToString(), $Host.Name
 }
 
 #--------------------------------------------------------------------------------------
 #Set some PowerShell settings that can help to reduce module import errors
 #https://github.com/MicrosoftDocs/PowerShell-Docs/blob/main/reference/5.1/Microsoft.PowerShell.Core/About/about_Preference_Variables.md
-Function IncreasePowerShell5Counts {
+Function Private:IncreasePowerShell5Counts {
     if ($PSVersionTable.PSVersion.Major -eq 5 ) {
         $MaximumFunctionCount = 8192
         $MaximumVariableCount = 8192
@@ -114,7 +116,7 @@ Function IncreasePowerShell5Counts {
 
 #--------------------------------------------------------------------------------------
 #Set variables for user and admin status
-Function SetAdminStatus {
+Function Private:SetAdminStatus {
     if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
         $script:identity = [Security.Principal.WindowsIdentity]::GetCurrent()
         $script:principal = New-Object Security.Principal.WindowsPrincipal $script:identity
@@ -128,7 +130,7 @@ Function SetAdminStatus {
 
 #--------------------------------------------------------------------------------------
 #Run commands only in admin terminals
-Function SetAdminCommands  {
+Function Private:SetAdminCommands  {
     if ($script:isAdmin -eq $true) {
         if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
             Function edithosts {notepad.exe "$env:SystemRoot\System32\drivers\etc\hosts"}
@@ -139,7 +141,7 @@ Function SetAdminCommands  {
 
 #--------------------------------------------------------------------------------------
 #Set PowerShell Gallery as a trusted source for module installation
-Function SetPowerShellGalleryTrust {
+Function Private:SetPowerShellGalleryTrust {
     if (Get-Module -ListAvailable -Name PowerShellGet) {
         Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
         Write-Output "Set PSGallery source (https://www.powershellgallery.com/) as trusted"
@@ -150,7 +152,7 @@ Function SetPowerShellGalleryTrust {
 
 #--------------------------------------------------------------------------------------
 #Setup PSReadLine
-Function StartPSReadLine {
+Function Private:StartPSReadLine {
     if ($host.Name -eq 'ConsoleHost') {
         if (-not(Get-Module -ListAvailable -Name PSReadLine)) {
             Install-Module PSReadLine -Scope CurrentUser -AllowPrerelease
@@ -165,7 +167,7 @@ Function StartPSReadLine {
 
 #--------------------------------------------------------------------------------------
 #Oh-my-posh setup
-Function StartOhMyPosh {
+Function Private:StartOhMyPosh {
     if (($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) -and ($host.Name -match "ConsoleHost")) {
         if (Get-Command oh-my-posh) {
             if ($PSVersionTable.PSVersion.Major -eq 5 ) {
@@ -188,7 +190,7 @@ Function StartOhMyPosh {
 
 #--------------------------------------------------------------------------------------
 # Set Windows Directory traversal functions
-Function SetWindowsDirTraversal {
+Function Private:SetWindowsDirTraversal {
     if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
         Function cd... { Set-Location ..\.. }
         Function cd.... { Set-Location ..\..\.. }
@@ -292,47 +294,53 @@ Set-Alias -Name Restore-Profile -Value Sync-Profile
 function InstallandLoadModules() {
     #Just bypassing Linux root user/Global modules for now. Load them all in user/local
     if ($IsLinux) {
+        $result_str = ""
         foreach($global_module in $script:UltimatePSProfile.global_modules) {
             if (-not(Get-Module -ListAvailable -Name $global_module)) {
-                Write-Output "$global_module loading"
+                $result_str = $result_str + "$global_module(Installing) "
                 Install-Module $global_module -Scope CurrentUser
                 Import-Module $global_module -Scope Local
             } else {
-                Write-Output "$global_module already loaded"
+                $result_str = $result_str + "$global_module(Available) "
             }
         }
-
+        Write-Output $result_str
+        $result_str = ""
         foreach ($module in $script:UltimatePSProfile.local_modules) {
             if (-not(Get-Module -ListAvailable -Name $module)) {
-                Write-Output "$module loading"
+                $result_str = $result_str + "$module(Installing) "
                 Install-Module $module -Scope CurrentUser
                 Import-Module $module -Scope Local
             } else {
-                Write-Output "$module already loaded"
+                $result_str = $result_str + "$module(Available) "
             }
         }
+        Write-Output $result_str
     } else {
         if ($script:isAdmin -eq $true) { #Maybe check if the global modules are available and if they are not, let user know to run as admin to install
+            $result_str = ""
             foreach($global_module in $script:UltimatePSProfile.global_modules) {
                 if (-not(Get-Module -ListAvailable -Name $global_module)) {
-                    Write-Output "$global_module loading"
+                    $result_str = $result_str + "$global_module(Installing) "
                     Install-Module $global_module -Scope AllUsers
                     Import-Module $global_module -Scope Global
                 } else {
-                    Write-Output "$global_module already loaded"
+                    $result_str = $result_str + "$global_module(Available) "
                 }
             }
         }
-
+        Write-Output $result_str
+        $result_str = ""
         foreach ($module in $script:UltimatePSProfile.local_modules) {
             if (-not(Get-Module -ListAvailable -Name $module)) {
-                Write-Output "$module loading"
+                $result_str = $result_str + "$module(Installing) "
                 Install-Module $module -Scope CurrentUser
                 Import-Module $module -Scope Local
             } else {
-                Write-Output "$module already loaded"
+                $result_str = $result_str + "$module(Available) "
             }
         }
+        Write-Output $result_str
     }
 }
 
@@ -352,7 +360,7 @@ SetWindowsDirTraversal
 #--------------------------------------------------------------------------------------
 #Install extra functions if the script is still within load time limit
 if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:UltimatePSProfile.max_profileload_seconds * 1000)) {
-    #Other usefull functions
+    #Other useful functions
     Function uptime {
         if ($PSVersionTable.PSVersion.Major -eq 5 ) {
             Get-WmiObject win32_operatingsystem |
@@ -396,7 +404,7 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
         }
     }
     #--------------------------------------------------------------------------------------
-    #Functions that only load if a certian OS
+    #Functions that only load if a certain OS
     if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
         #Linux-Like functions and commands
         #Set UNIX-like aliases for the admin command, so sudo <command> will run the command
@@ -481,6 +489,8 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
                 }
             }
         }
+    } else {
+        Write-Output "Skipping extra setting up PowerShell functions as the profile took > $($script:UltimatePSProfile.max_profileload_seconds) seconds to load."
     }
 }
 

@@ -489,9 +489,9 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
                 }
             }
         }
-    } else {
-        Write-Output "Skipping extra setting up PowerShell functions as the profile took > $($script:UltimatePSProfile.max_profileload_seconds) seconds to load."
     }
+} else {
+    Write-Output "Skipping extra setting up PowerShell functions as the profile took > $($script:UltimatePSProfile.max_profileload_seconds) seconds to load."
 }
 
 #--------------------------------------------------------------------------------------

@@ -15,6 +15,8 @@
 
 #max_profileload_seconds    Set the maximum time in seconds to determine if the profile should look to install modules that are not available in the profile
 
+#extra_profile_script       Calls an extra .ps1 script at the end of this profile script. Use full path, i.e. (.\script.ps1, c:\script.ps1) Used for your own personal commands.
+
 #psprofile_link             PowerShell profile URL. You can copy the code in this script and create a GitHub. Update this property.
 
 #psprofile_repo_path        Local repo folder for this Ultimate PowerShell Profile. Used for the Copy-Profile command
@@ -32,6 +34,7 @@
 #                           If forking this script and adding your own editors, please set back these defaults when submitting PR.
 Function Private:CreateUltimatePSProfileVars {
     $script:UltimatePSProfile = [PSCustomObject]@{
+        extra_profile_script = ""     #Calls an extra .ps1 script at the end of this profile script. Used for your own personal commands.
         psprofile_link = "https://raw.githubusercontent.com/itoleck/UltimatePowerShellProfile/main/Microsoft.PowerShell_profile.ps1"
         psprofile_repo_path = ""
         stopwatch = [system.diagnostics.stopwatch]::StartNew()
@@ -51,19 +54,40 @@ Function Private:CreateUltimatePSProfileVars {
 #Set some paths if this session is running in Windows
 Function Private:SetScriptPaths {
     if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
-        $script:UltimatePSProfile.psprofile_repo_path = "$env:USERPROFILE\source\repos\itoleck\UltimatePowerShellProfile\"
-        $script:UltimatePSProfile.gh_repo_base_folder = "$env:USERPROFILE\source\repos\"
-        $script:UltimatePSProfile.system_temp = $env:TEMP + "\"
-        $script:UltimatePSProfile.mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "\"
-        $script:UltimatePSProfile.oh_my_posh_theme = "$env:APPDATA\Local\Programs\oh-my-posh\themes\agnoster.omp"
+        if ($script:UltimatePSProfile.psprofile_link.length -lt 1) {
+			$script:UltimatePSProfile.psprofile_link = "https://raw.githubusercontent.com/itoleck/UltimatePowerShellProfile/main/Microsoft.PowerShell_profile.ps1"
+		}
+		if ($script:UltimatePSProfile.psprofile_repo_path.length -lt 1) {
+			$script:UltimatePSProfile.psprofile_repo_path = "$env:USERPROFILE\source\repos\itoleck\UltimatePowerShellProfile\"
+		}
+		if ($script:UltimatePSProfile.gh_repo_base_folder.length -lt 1) {
+			$script:UltimatePSProfile.gh_repo_base_folder = "$env:USERPROFILE\source\repos\"
+		}
+		if ($script:UltimatePSProfile.system_temp.length -lt 1) {
+			$script:UltimatePSProfile.system_temp = $env:TEMP + "\"
+		}
+		if ($script:UltimatePSProfile.mydocuments_path.length -lt 1) {
+			$script:UltimatePSProfile.mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "\"
+		}
+		if ($script:UltimatePSProfile.oh_my_posh_theme.length -lt 1) {
+			$script:UltimatePSProfile.oh_my_posh_theme = "$env:APPDATA\Local\Programs\oh-my-posh\themes\agnoster.omp.json"
+		}
     }
 
     #Set some paths if this session is running in Linux
     if ($IsLinux) {
-        $script:UltimatePSProfile.psprofile_repo_path = [System.Environment]::GetFolderPath('Personal') + "/source/repos/itoleck/UltimatePowerShellProfile/"
-        $script:UltimatePSProfile.gh_repo_base_folder = [System.Environment]::GetFolderPath('Personal') + "/source/repos/"
-        $script:UltimatePSProfile.system_temp = "/tmp/"
-        $script:UltimatePSProfile.mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "/"
+        if ($script:UltimatePSProfile.psprofile_repo_path.length -lt 1) {
+			$script:UltimatePSProfile.psprofile_repo_path = [System.Environment]::GetFolderPath('Personal') + "/source/repos/itoleck/UltimatePowerShellProfile/"
+		}
+		if ($script:UltimatePSProfile.gh_repo_base_folder.length -lt 1) {
+			$script:UltimatePSProfile.gh_repo_base_folder = [System.Environment]::GetFolderPath('Personal') + "/source/repos/"
+		}
+		if ($script:UltimatePSProfile.system_temp.length -lt 1) {
+			$script:UltimatePSProfile.system_temp = "/tmp/"
+		}
+		if ($script:UltimatePSProfile.mydocuments_path.length -lt 1) {
+			$script:UltimatePSProfile.mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "/"
+		}
     }
 }
 
@@ -153,6 +177,7 @@ Function Private:StartPSReadLine {
             Import-Module PSReadLine -Scope Local -AllowPrerelease
             Set-PSReadLineKeyHandler -Key UpArrow -Function HistorySearchBackward
             Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
+            Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
         } else {
             Write-Output ("PSReadLine {0}" -f (Get-Module PSReadLine).Version.ToString())
         }
@@ -173,30 +198,13 @@ Function Private:StartOhMyPosh {
                 oh-my-posh.exe prompt init pwsh --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
                 Enable-PoshTransientPrompt
                 Write-Output "Enabled oh-my-posh for Windows PowerShell 7"
+				Write-Output "oh-my-posh theme set to: $($script:UltimatePSProfile.oh_my_posh_theme)"
             }
         } else {
             Write-Output "Oh-my-posh not installed. No fancy prompt for you."
         }
     } else {
         Write-Output "PowerShell 7+ not running in Windows Console Host. Oh-my-posh not available."
-    }
-}
-
-#--------------------------------------------------------------------------------------
-# Set Windows Directory traversal functions
-Function Private:SetWindowsDirTraversal {
-    if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
-        Function cd... { Set-Location ..\.. }
-        Function cd.... { Set-Location ..\..\.. }
-        Function cddrivers {Set-Location -Path $env:SystemRoot\System32\Drivers}
-        if (Test-Path -Path "${env:ProgramFiles(x86)}\Windows Kits\10\Windows Performance Toolkit\") {
-            Function cdwpt {Set-Location -Path "${env:ProgramFiles(x86)}\Windows Kits\10\Windows Performance Toolkit\"}
-        }
-        Function cdrepos {Set-Location -Path $script:UltimatePSProfile.gh_repo_base_folder}
-        Function cdtemp {Set-Location -Path $script:UltimatePSProfile.system_temp}
-        Function cduser {Set-Location -Path $env:USERPROFILE}
-        Function cddesktop {Set-Location -Path ([System.Environment]::GetFolderPath('Desktop'))}
-        Function cddownloads {Set-Location -Path $env:USERPROFILE\Downloads} #Lazy, don't really want to use pinvoke just for this
     }
 }
 
@@ -327,6 +335,24 @@ function InstallandLoadModules() {
     }
 }
 
+Register-ArgumentCompleter -Native -CommandName az -ScriptBlock {
+    param($commandName, $wordToComplete, $cursorPosition)
+    $completion_file = New-TemporaryFile
+    $env:ARGCOMPLETE_USE_TEMPFILES = 1
+    $env:_ARGCOMPLETE_STDOUT_FILENAME = $completion_file
+    $env:COMP_LINE = $wordToComplete
+    $env:COMP_POINT = $cursorPosition
+    $env:_ARGCOMPLETE = 1
+    $env:_ARGCOMPLETE_SUPPRESS_SPACE = 0
+    $env:_ARGCOMPLETE_IFS = "`n"
+    $env:_ARGCOMPLETE_SHELL = 'powershell'
+    az 2>&1 | Out-Null
+    Get-Content $completion_file | Sort-Object | ForEach-Object {
+        [System.Management.Automation.CompletionResult]::new($_, $_, "ParameterValue", $_)
+    }
+    Remove-Item $completion_file, Env:\_ARGCOMPLETE_STDOUT_FILENAME, Env:\ARGCOMPLETE_USE_TEMPFILES, Env:\COMP_LINE, Env:\COMP_POINT, Env:\_ARGCOMPLETE, Env:\_ARGCOMPLETE_SUPPRESS_SPACE, Env:\_ARGCOMPLETE_IFS, Env:\_ARGCOMPLETE_SHELL
+}
+
 #Begin script
 CreateUltimatePSProfileVars
 SetScriptPaths
@@ -337,7 +363,6 @@ SetAdminStatus
 SetPowerShellGalleryTrust
 StartPSReadLine
 StartOhMyPosh
-SetWindowsDirTraversal
 
 #--------------------------------------------------------------------------------------
 #Install extra functions if the script is still within load time limit
@@ -421,11 +446,23 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
         Function pkill($name) {
             Get-Process $name -ErrorAction SilentlyContinue | Stop-Process -Force
         }
-        Function head($file, $rows) {
-            Get-Content -Head $rows -Path $file
+        Function head {
+			param(
+				[Parameter(Mandatory=$true)]
+				[System.IO.FileInfo] $File,
+				[Parameter(Mandatory=$false)]
+				[int] $Rows = 10
+			)
+            Get-Content -Head $Rows -Path $File
         }
-        Function tail($file, $rows) {
-            Get-Content -Tail $rows -Path $file
+        Function tail {
+			param(
+				[Parameter(Mandatory=$true)]
+				[System.IO.FileInfo] $File,
+				[Parameter(Mandatory=$false)]
+				[int] $Rows = 10
+			)
+            Get-Content -Tail $Rows -Path $File
         }
         Function grepstr {
             [CmdletBinding()]
@@ -497,6 +534,13 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
 }
 
 #--------------------------------------------------------------------------------------
+
+#Run the extra profile script for personal settings and commands
+Write-Output "Running user's extra script: $($script:UltimatePSProfile.extra_profile_script)"
+if (($script:UltimatePSProfile.extra_profile_script.length -gt 0) -and (Test-Path -Path $script:UltimatePSProfile.extra_profile_script)) {
+    . $script:UltimatePSProfile.extra_profile_script
+}
+
 #End of script
 #Remind user which functions are available in the console
 Write-Output "The following functions were set by profile:"

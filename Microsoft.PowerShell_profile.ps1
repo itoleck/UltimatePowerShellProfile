@@ -140,6 +140,8 @@ Function Private:IncreasePowerShell5Counts {
     if ($PSVersionTable.PSVersion.Major -eq 5 ) {
         $MaximumFunctionCount = 8192
         $MaximumVariableCount = 8192
+        $MaximumAliasCount = 8192
+        $MaximumHistoryCount = 8192
     }
 }
 

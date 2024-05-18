@@ -44,7 +44,7 @@ Function Private:CreateUltimatePSProfileVars {
         gh_repo_base_folder = ""
         system_temp = ""
         global_modules = 'Az','Az.Accounts','AzureAD','MSOnline','Az.CostManagement','Microsoft.Graph'
-        local_modules = 'PowerShellGet','Terminal-Icons','Carbon','CredentialManager','PnP.PowerShell','ImportExcel','WifiTools','ExchangeOnlineManagement','MicrosoftTeams','PSScriptAnalyzer','AzureSaveMoney'
+        local_modules = 'PSUtil','PowerShellGet','Terminal-Icons','Carbon','CredentialManager','PnP.PowerShell','ImportExcel','WifiTools','ExchangeOnlineManagement','MicrosoftTeams','PSScriptAnalyzer','AzureSaveMoney'
         linux_modules = 'PowerShellGet'
         profile_editors = 'code','powershell_ise.exe','notepad++.exe','notepad.exe','nano'
     }
@@ -377,6 +377,18 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
             Function edithosts {nano}
         }
         $Host.UI.RawUI.WindowTitle += " [ADMIN]"
+    }
+    #Function to set the local Python env using pyenv-win
+    Function Set-PythonVersion($pyver) {
+        Set-Content -Path .\.python-version -Value $pyver
+        python -m venv .\.venv
+    }
+    Function Activate-Python {
+        if(Test-Path -Path ".\.venv") {
+            .\.venv\Scripts\Activate.ps1
+        } else {
+            Write-Output "No .venv folder in this folder. Create a Python env with Set-PythonVersion 3.x.x"
+        }
     }
     Function os {
         if ($IsWindows) {

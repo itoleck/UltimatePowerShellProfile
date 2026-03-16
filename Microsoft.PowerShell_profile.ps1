@@ -73,7 +73,7 @@ Function Private:SetScriptPaths {
 			$script:UltimatePSProfile.system_temp = $env:TEMP + "\"
 		}
 		if ($script:UltimatePSProfile.mydocuments_path.length -lt 1) {
-			$script:UltimatePSProfile.mydocuments_path = [System.Environment]::GetFolderPath('Personal') + "\"
+			$script:UltimatePSProfile.mydocuments_path = [System.Environment]::GetFolderPath('MyDocuments') + "\"
 		}
 		if ($script:UltimatePSProfile.oh_my_posh_theme.length -lt 1) {
 			$script:UltimatePSProfile.oh_my_posh_theme = "$env:APPDATA\Local\Programs\oh-my-posh\themes\agnoster.omp.json"

@@ -32,6 +32,12 @@
 
 #profile_editors            A list of text editors, in order of precedence.
 #                           If forking this script and adding your own editors, please set back these defaults when submitting PR.
+
+$ErrorActionPreference = 'Continue'
+trap {
+    Write-Error "An error occurred in the script, exiting."
+}
+
 Function Private:CreateUltimatePSProfileVars {
     $script:UltimatePSProfile = [PSCustomObject]@{
         extra_profile_script = ""     #Calls an extra .ps1 script at the end of this profile script. Used for your own personal commands.
@@ -98,9 +104,9 @@ Function Private:CreateProfileIfNotExist {
         try {
             #Use My Documents for the download because Downloads path is not available unless you use pinvoke 
             Invoke-WebRequest -Uri $script:UltimatePSProfile.psprofile_link -OutFile "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1"
-            Write-Output "Downloaded profile from $($script:UltimatePSProfile.psprofile_link)"
+            Write-Verbose "Downloaded profile from $($script:UltimatePSProfile.psprofile_link)" -Verbose
         } catch {
-            Write-Output "Error downloading profile from $($script:UltimatePSProfile.psprofile_link)"
+            Write-Verbose "Error downloading profile from $($script:UltimatePSProfile.psprofile_link)"
         }
         try {
             if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
@@ -120,10 +126,10 @@ Function Private:CreateProfileIfNotExist {
             }
         }
         catch {
-            Write-Output "Error copying profile from $($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1 to $($script:UltimatePSProfile.mydocuments_path)\WindowsPowerShell\ or $($script:UltimatePSProfile.mydocuments_path)\PowerShell\"
+            Write-Verbose "Error copying profile from $($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1 to $($script:UltimatePSProfile.mydocuments_path)\WindowsPowerShell\ or $($script:UltimatePSProfile.mydocuments_path)\PowerShell\"
         }
     } else {
-        Write-Output "Profile already exists. Run Install-Profile to update Ultimate PowerShell Profile from $($script:UltimatePSProfile.psprofile_link)"
+        Write-Verbose "Profile already exists. Run Install-Profile to update Ultimate PowerShell Profile from $($script:UltimatePSProfile.psprofile_link)" -Verbose
     }
 }
 
@@ -164,9 +170,9 @@ Function Private:SetAdminStatus {
 Function Private:SetPowerShellGalleryTrust {
     if (Get-Module -ListAvailable -Name PowerShellGet) {
         Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-        Write-Output "Set PSGallery source (https://www.powershellgallery.com/) as trusted"
+        Write-Verbose "Set PSGallery source (https://www.powershellgallery.com/) as trusted"
     } else {
-        Write-Output "PowerShellGet PowerShell module not installed. Run Install-Module -Name PowerShellGet -Scope AllUsers"
+        Write-Verbose "PowerShellGet PowerShell module not installed. Run Install-Module -Name PowerShellGet -Scope AllUsers"
     }
 }
 
@@ -181,7 +187,7 @@ Function Private:StartPSReadLine {
             Set-PSReadLineKeyHandler -Key DownArrow -Function HistorySearchForward
             Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
         } else {
-            Write-Output ("PSReadLine {0}" -f (Get-Module PSReadLine).Version.ToString())
+            Write-Verbose ("PSReadLine {0}" -f (Get-Module PSReadLine).Version.ToString())
         }
     }
 }
@@ -192,21 +198,21 @@ Function Private:StartOhMyPosh {
     if (($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) -and ($host.Name -match "ConsoleHost")) {
         if (Get-Command oh-my-posh) {
             if ($PSVersionTable.PSVersion.Major -eq 5 ) {
-                oh-my-posh.exe prompt init powershell --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
-                Enable-PoshTransientPrompt
-                Write-Output "Enabled oh-my-posh for Windows PowerShell"
+                oh-my-posh init powershell --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
+                #Enable-PoshTransientPrompt
+                Write-Verbose "Enabled oh-my-posh for Windows PowerShell"
             } 
             if ($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
-                oh-my-posh.exe prompt init pwsh --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
-                Enable-PoshTransientPrompt
-                Write-Output "Enabled oh-my-posh for Windows PowerShell 7"
-				Write-Output "oh-my-posh theme set to: $($script:UltimatePSProfile.oh_my_posh_theme)"
+                oh-my-posh init pwsh --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
+                #Enable-PoshTransientPrompt
+                Write-Verbose "Enabled oh-my-posh for PowerShell 7"
+				Write-Verbose "oh-my-posh theme set to: $($script:UltimatePSProfile.oh_my_posh_theme)"
             }
         } else {
-            Write-Output "Oh-my-posh not installed. No fancy prompt for you."
+            Write-Verbose "Oh-my-posh not installed. No fancy prompt for you."
         }
     } else {
-        Write-Output "PowerShell 7+ not running in Windows Console Host. Oh-my-posh not available."
+        Write-Verbose "PowerShell 7+ not running in Windows Console Host. Oh-my-posh not available."
     }
 }
 
@@ -217,9 +223,9 @@ Function Install-Profile {
     try {
         #Use My Documents for the download because Downloads path is not available unless you use p/invoke
         Invoke-WebRequest -Uri $script:UltimatePSProfile.psprofile_link -OutFile "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1"
-        Write-Output "Downloaded profile from $($script:UltimatePSProfile.psprofile_link)"
+        Write-Verbose "Downloaded profile from $($script:UltimatePSProfile.psprofile_link)"
     } catch {
-        Write-Output "Error downloading profile from $($script:UltimatePSProfile.psprofile_link)"
+        Write-Verbose "Error downloading profile from $($script:UltimatePSProfile.psprofile_link)"
     }
     try {
         if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
@@ -233,7 +239,7 @@ Function Install-Profile {
         }
     }
     catch {
-        Write-Output "Error copying profile from $($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1 to $($script:UltimatePSProfile.mydocuments_path)WindowsPowerShell or $($script:UltimatePSProfile.mydocuments_path)PowerShell"
+        Write-Verbose "Error copying profile from $($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1 to $($script:UltimatePSProfile.mydocuments_path)WindowsPowerShell or $($script:UltimatePSProfile.mydocuments_path)PowerShell"
     }
 }
 
@@ -244,12 +250,12 @@ Function Edit-Profile {
     $isopen = $false
 
     foreach ($editor in $script:UltimatePSProfile.profile_editors) {
-        Write-Output "Trying to open $($profile.CurrentUserCurrentHost) in $editor"
+        Write-Verbose "Trying to open $($profile.CurrentUserCurrentHost) in $editor"
         if (!($isopen) -and ((Get-Command -Name $editor).Length -gt 0)) {
             try {
                 Start-Process $editor -ArgumentList ($profile.CurrentUserCurrentHost)
                 $isopen = $true
-				Write-Output "Opened $($profile.CurrentUserCurrentHost) in $editor"
+				Write-Verbose "Opened $($profile.CurrentUserCurrentHost) in $editor"
 				break
             }
             catch {
@@ -259,7 +265,7 @@ Function Edit-Profile {
     }
 
     If ($isopen = $false) {
-        Write-Output "Could not find a suitable PowerShell script editor on your machine."
+        Write-Verbose "Could not find a suitable PowerShell script editor on your machine."
     }
 }
 
@@ -268,7 +274,7 @@ Function Edit-Profile {
 #Used when developing the script on a machine for fast testing. Run Copy-ProfilesFromLocalRepo, then Sync-Profile
 Function Copy-ProfilesFromLocalRepo {
     try {
-        Write-Output "Copying profile to PowerShell folders."
+        Write-Verbose "Copying profile to PowerShell folders."
         if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
             Copy-Item -Path "$($script:UltimatePSProfile.psprofile_repo_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)WindowsPowerShell" -Force -Verbose
             Copy-Item -Path "$($script:UltimatePSProfile.psprofile_repo_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)PowerShell" -Force -Verbose
@@ -280,14 +286,14 @@ Function Copy-ProfilesFromLocalRepo {
         }
     }
     catch {
-        Write-Output "Error copying profile to PowerShell profile folders."
+        Write-Verbose "Error copying profile to PowerShell profile folders."
     }
 }
 
 #--------------------------------------------------------------------------------------
 #Just reload the profile in the current window
 Function Sync-Profile {
-    & $profile
+    . $profile
 }
 Set-Alias -Name Restore-Profile -Value Sync-Profile
 
@@ -308,7 +314,7 @@ function InstallandLoadModules() {
                 $result_str = $result_str + "$module(Available) "
             }
         }
-        Write-Output $result_str
+        Write-Verbose $result_str
     } else {
         if ($script:isAdmin -eq $true) { #Maybe check if the global modules are available and if they are not, let user know to run as admin to install
             $result_str = ""
@@ -322,7 +328,7 @@ function InstallandLoadModules() {
                 }
             }
         }
-        Write-Output $result_str
+        Write-Verbose $result_str
         $result_str = ""
         foreach ($module in $script:UltimatePSProfile.local_modules) {
             if (-not(Get-Module -ListAvailable -Name $module)) {
@@ -333,7 +339,7 @@ function InstallandLoadModules() {
                 $result_str = $result_str + "$module(Available) "
             }
         }
-        Write-Output $result_str
+        Write-Verbose $result_str
     }
 }
 
@@ -355,16 +361,73 @@ Register-ArgumentCompleter -Native -CommandName az -ScriptBlock {
     Remove-Item $completion_file, Env:\_ARGCOMPLETE_STDOUT_FILENAME, Env:\ARGCOMPLETE_USE_TEMPFILES, Env:\COMP_LINE, Env:\COMP_POINT, Env:\_ARGCOMPLETE, Env:\_ARGCOMPLETE_SUPPRESS_SPACE, Env:\_ARGCOMPLETE_IFS, Env:\_ARGCOMPLETE_SHELL
 }
 
+function updateprogress($percent) {
+    Write-Progress -Activity "Loading profile" -Status "$percent% Complete:" -PercentComplete $percent
+}
+
 #Begin script
+updateprogress 1
 CreateUltimatePSProfileVars
+
+updateprogress 15
 SetScriptPaths
+
+updateprogress 30
 CreateProfileIfNotExist
+
+updateprogress 40
 SetWindowTitle
+
+updateprogress 50
 IncreasePowerShell5Counts
+
+updateprogress 60
 SetAdminStatus
+
+updateprogress 70
 SetPowerShellGalleryTrust
+
+updateprogress 80
 StartPSReadLine
+
+updateprogress 90
 StartOhMyPosh
+
+updateprogress 100
+
+#Install Python pyenv-win functions
+Function Set-PythonVersion($pyver) {
+    Write-Verbose "This only works if you have pyenv-win installed" -Verbose
+    Set-Content -Path .\.python-version -Value $pyver
+}
+Function Create-PythonEnv($envfolder) {
+    python.exe -m venv .\$envfolder
+}
+Function Activate-Python($p) {
+    if(Test-Path -Path ".\$p\Scripts\Activate.ps1") {
+        & ".\$p\Scripts\Activate.ps1"
+        Write-Verbose "deactivate to deactivate the virtual environment" -Verbose
+    } else {
+        Write-Verbose "No Python venv activate script in folder $p\Scripts. Create a Python env with Set-PythonVersion 3.x.x" -Verbose
+    }
+}
+Function New-PythonProject() {
+    param(
+        [Parameter(Mandatory=$true, HelpMessage = 'i.e. 3.x.x')][string]$pyver,
+        [Parameter(Mandatory=$true, HelpMessage = 'i.e. .venv')][System.IO.DirectoryInfo]$envfolder
+    )
+    Write-Verbose "This only works if you have pyenv-win installed" -Verbose
+
+    pyenv install $pyver
+    pyenv local $pyver
+    
+    Write-Verbose "Setting the Python version with .\.python-version file" -Verbose
+    Set-PythonVersion $pyver
+    Write-Verbose "Creating Python virtual environment with python -m venv .\$envfolder" -Verbose
+    Create-PythonEnv $envfolder
+    Write-Verbose "Activating Python virtual environment with .\$envfolder\Scripts\Activate.ps1"
+    Activate-Python $envfolder
+}
 
 #--------------------------------------------------------------------------------------
 #Install extra functions if the script is still within load time limit
@@ -379,17 +442,6 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
         $Host.UI.RawUI.WindowTitle += " [ADMIN]"
     }
     #Function to set the local Python env using pyenv-win
-    Function Set-PythonVersion($pyver) {
-        Set-Content -Path .\.python-version -Value $pyver
-        python -m venv .\.venv
-    }
-    Function Activate-Python {
-        if(Test-Path -Path ".\.venv") {
-            .\.venv\Scripts\Activate.ps1
-        } else {
-            Write-Output "No .venv folder in this folder. Create a Python env with Set-PythonVersion 3.x.x"
-        }
-    }
     Function os {
         if ($IsWindows) {
             [System.Environment]::OSVersion
@@ -424,7 +476,7 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
     Function find-file($name) {
         Get-ChildItem -recurse -filter "*${name}*" -ErrorAction SilentlyContinue | ForEach-Object {
             $place_path = $_.directory
-            Write-Output "${place_path}\${_}"
+            Write-Verbose "${place_path}\${_}"
         }
     }
     #--------------------------------------------------------------------------------------
@@ -536,33 +588,33 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
         }
     }
 } else {
-    Write-Output "Skipping extra setting up PowerShell functions as the profile took > $($script:UltimatePSProfile.max_profileload_seconds) seconds to load."
+    Write-Verbose "Skipping extra setting up PowerShell functions as the profile took > $($script:UltimatePSProfile.max_profileload_seconds) seconds to load." -Verbose
 }
 
 #--------------------------------------------------------------------------------------
 #Install modules if the script is still within load time limit and not already available in session
 if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:UltimatePSProfile.max_profileload_seconds * 1000)) {
-    InstallandLoadModules
+    #InstallandLoadModules
 } else {
-    Write-Output "Skipping module installs as the profile took > $($script:UltimatePSProfile.max_profileload_seconds) seconds to load."
+    Write-Verbose "Skipping module installs as the profile took > $($script:UltimatePSProfile.max_profileload_seconds) seconds to load." -Verbose
 }
 
 #--------------------------------------------------------------------------------------
 
 #Run the extra profile script for personal settings and commands
-Write-Output "Running user's extra script: $($script:UltimatePSProfile.extra_profile_script)"
 if (($script:UltimatePSProfile.extra_profile_script.length -gt 0) -and (Test-Path -Path $script:UltimatePSProfile.extra_profile_script)) {
+    Write-Verbose "Running user's extra script: $($script:UltimatePSProfile.extra_profile_script)" -Verbose
     . $script:UltimatePSProfile.extra_profile_script
 }
 
 #End of script
 #Remind user which functions are available in the console
-Write-Output "The following functions were set by profile:"
+Write-Verbose "The following functions were set by profile:" -Verbose
 Get-ChildItem -Path Function:\ | Where-Object{$_.Source.ToString().Length -lt 1} | Select-Object Name | Format-Wide -AutoSize
 
 #Don't forget to stop the stopwatch
 $script:UltimatePSProfile.stopwatch.stop()
 if ($IsLinux) {
-    Write-Output "Loading personal and system profiles took $($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds) ms."
+    Write-Verbose "Loading personal and system profiles took $($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds) ms." -Verbose
     [Environment]::GetEnvironmentVariable('MOTD_SHOWN')
 }

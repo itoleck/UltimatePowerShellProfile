@@ -38,6 +38,12 @@ trap {
     Write-Error "An error occurred in the script, exiting."
 }
 
+# Polyfill missing variables in Windows PowerShell 5.1
+if ($null -eq $IsWindows) {
+    $global:IsWindows = ($PSVersionTable.Platform -eq 'Win32NT' -or $null -eq $PSVersionTable.Platform)
+    $global:IsLinux = ($PSVersionTable.Platform -eq 'Unix')
+}
+
 Function Private:CreateUltimatePSProfileVars {
     $script:UltimatePSProfile = [PSCustomObject]@{
         extra_profile_script = ""     #Calls an extra .ps1 script at the end of this profile script. Used for your own personal commands.
@@ -112,7 +118,9 @@ Function Private:CreateProfileIfNotExist {
             if ($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) {
                 Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)WindowsPowerShell" -Force -Verbose
                 Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)PowerShell" -Force -Verbose
+                Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)PowerShell\Microsoft.VSCode_profile.ps1" -Force -Verbose
                 Copy-Item -Path "$($script:UltimatePSProfile.mydocuments_path)Microsoft.PowerShell_profile.ps1" -Destination "$($script:UltimatePSProfile.mydocuments_path)WindowsPowerShell\Microsoft.PowerShellISE_profile.ps1" -Force -Verbose
+
             } else {
                 if ($IsLinux) {
                     try {
@@ -179,7 +187,7 @@ Function Private:SetPowerShellGalleryTrust {
 #--------------------------------------------------------------------------------------
 #Setup PSReadLine
 Function Private:StartPSReadLine {
-    if ($host.Name -eq 'ConsoleHost') {
+    if ($host.Name -notmatch 'ISE') {
         if (-not(Get-Module -ListAvailable -Name PSReadLine)) {
             Install-Module PSReadLine -Scope CurrentUser -AllowPrerelease
             Import-Module PSReadLine -Scope Local -AllowPrerelease
@@ -195,24 +203,16 @@ Function Private:StartPSReadLine {
 #--------------------------------------------------------------------------------------
 #Oh-my-posh setup
 Function Private:StartOhMyPosh {
-    if (($IsWindows -or ($PSVersionTable.PSVersion.Major -eq 5)) -and ($host.Name -match "ConsoleHost")) {
+    if ($IsWindows -and $host.Name -notmatch 'ISE') {
         if (Get-Command oh-my-posh) {
-            if ($PSVersionTable.PSVersion.Major -eq 5 ) {
-                oh-my-posh init powershell --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
-                #Enable-PoshTransientPrompt
-                Write-Verbose "Enabled oh-my-posh for Windows PowerShell"
-            } 
-            if ($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
-                oh-my-posh init pwsh --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
-                #Enable-PoshTransientPrompt
-                Write-Verbose "Enabled oh-my-posh for PowerShell 7"
-				Write-Verbose "oh-my-posh theme set to: $($script:UltimatePSProfile.oh_my_posh_theme)"
-            }
+            $shell = if ($PSVersionTable.PSVersion.Major -ge 6) { "pwsh" } else { "powershell" }
+            oh-my-posh init $shell --config $script:UltimatePSProfile.oh_my_posh_theme | Invoke-Expression
+            Write-Verbose "Enabled oh-my-posh for $shell"
         } else {
             Write-Verbose "Oh-my-posh not installed. No fancy prompt for you."
         }
     } else {
-        Write-Verbose "PowerShell 7+ not running in Windows Console Host. Oh-my-posh not available."
+        Write-Verbose "Unsupported host environment for Oh-my-posh."
     }
 }
 
@@ -489,13 +489,8 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
         Set-Alias -Name su -Value admin
         Set-Alias -Name sudo -Value admin
         Function uptime {
-            if ($PSVersionTable.PSVersion.Major -eq 5 ) {
-                Get-WmiObject win32_operatingsystem |
-                Select-Object @{EXPRESSION={ $_.ConverttoDateTime($_.lastbootuptime)}} | Format-Table -HideTableHeaders
-            }
-            if ($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
-                net statistics workstation | Select-String "since" | foreach-object {$_.ToString().Replace('Statistics since ', '')}
-            }
+            $uptime = (Get-Date) - (Get-CimInstance Win32_OperatingSystem).LastBootUpTime
+            Write-Output "Uptime: $($uptime.Days) Days, $($uptime.Hours) Hours, $($uptime.Minutes) Minutes"
         }
         Function touchuni($file) {
             "" | Out-File $file -Encoding unicode
@@ -569,21 +564,12 @@ if ($script:UltimatePSProfile.stopwatch.ElapsedMilliseconds -lt ($script:Ultimat
         #Simple Function to start a new elevated process. If arguments are supplied, then 
         #a single command is started with admin rights; if not, then a new admin instance of PowerShell is started.
         Function admin {
-            if ($PSVersionTable.PSVersion.Major -eq 5 ) {
-                if ($args.Count -gt 0) {   
-                    $argList = "& '" + $args + "'"
-                    Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $argList
-                } else {
-                    Start-Process "$psHome\powershell.exe" -Verb runAs
-                }
-            }
-            if ($IsWindows -and $PSVersionTable.PSVersion.Major -eq 7 ) {
-                if ($args.Count -gt 0) {   
-                    $argList = "& '" + $args + "'"
-                    Start-Process "$psHome\pwsh.exe" -Verb runAs -ArgumentList $argList
-                } else {
-                    Start-Process "$psHome\pwsh.exe" -Verb runAs
-                }
+            $shell = if ($PSVersionTable.PSVersion.Major -ge 6) { "pwsh.exe" } else { "powershell.exe" }
+            if ($args.Count -gt 0) {   
+                $argList = "& '" + $args + "'"
+                Start-Process "$psHome\$shell" -Verb runAs -ArgumentList $argList
+            } else {
+                Start-Process "$psHome\$shell" -Verb runAs
             }
         }
     }
